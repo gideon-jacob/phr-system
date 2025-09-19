@@ -72,8 +72,10 @@
 
 ### 6. Technical Architecture & Stack
 
-- **Platform:** A **Progressive Web App (PWA)** will be the primary platform to ensure maximum accessibility, offline capabilities, and compatibility across all devices, from low-cost smartphones to desktops.
-- **Frontend:** The user interface will be built with **React.js** and bundled with **Vite** to ensure a fast, modern, and highly responsive user experience.
-- **Backend & Interoperability:** The core federated architecture remains, leveraging microservices built with **Java (Spring Boot)** to handle secure data aggregation based on the HL7 FHIR standard.
-
+- **Platform:** A **Progressive Web App (PWA)** will be the primary platform to ensure maximum accessibility, offline capabilities, and compatibility across all devices.
+- **Frontend:** The user interface will be built with **React.js** and bundled with **Vite**.
+- **Backend:** A **microservice architecture** will be implemented using **Java (Spring Boot)**.
+- **Database:** A **polyglot persistence** approach will be used:
+    - **PostgreSQL** for the relational data in the central registry (users, consents).
+    - **MongoDB** for the semi-structured HL7 FHIR data at the federated hospital nodes.
 
