@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The National Personal Health Record (PHR) System is a patient-centric digital health platform aligned with the Ayushman Bharat Digital Mission (ABDM). The system consolidates health records under a unique ABHA ID using a hybrid federated architecture with microservices built on Java Spring Boot (backend) and React PWA (frontend). The system enables patients to control their health data, healthcare providers to access comprehensive patient histories with consent, and supports both large hospitals with self-hosted infrastructure and small clinics through a managed fiduciary service.
+The National Personal Health Record (PHR) System is an **open-source, patient-centric digital health infrastructure platform** aligned with the Ayushman Bharat Digital Mission (ABDM). Unlike closed PHR applications, this system is designed as **deployable, auditable, and extensible infrastructure** that governments, hospitals, and health-tech startups can clone, customize, and integrate with. The system consolidates health records under a unique ABHA ID using a hybrid federated architecture with microservices built on Java Spring Boot (backend) and React PWA (frontend). It provides comprehensive REST APIs for third-party integration, a plugin/extension architecture for custom modules, and supports both large hospitals with self-hosted infrastructure and small clinics through a managed fiduciary service. The system follows an **open-core business model** with a fully functional open-source community edition and optional paid enterprise features.
 
 ## Glossary
 
@@ -21,6 +21,12 @@ The National Personal Health Record (PHR) System is a patient-centric digital he
 - **Dedicated_Service**: Single-tenant fiduciary service for large hospitals
 - **API_Gateway**: Entry point service handling routing, rate limiting, and authentication
 - **Terminology_Binding**: Validation that coded values conform to standard vocabularies (SNOMED CT, LOINC)
+- **Plugin**: A modular extension that adds functionality without modifying core code
+- **Webhook**: A callback mechanism for real-time event notifications
+- **SDK**: Software Development Kit providing client libraries for API integration
+- **Open_Core**: Business model combining open-source core with paid enterprise features
+- **Community_Edition**: Fully functional open-source version with core PHR functionality
+- **Enterprise_Edition**: Paid version with advanced features, integrations, and support
 
 ## Requirements
 
@@ -94,31 +100,32 @@ The National Personal Health Record (PHR) System is a patient-centric digital he
 
 ### Requirement 6: FHIR Resource Storage and Validation
 
-**User Story:** As a system administrator, I want all health data to conform to FHIR R4 standards, so that the system maintains interoperability.
+**User Story:** As a system administrator, I want all health data to conform to FHIR R4 standards with comprehensive validation, so that the system maintains interoperability and data quality.
 
 #### Acceptance Criteria
 
-1. WHEN a FHIR_Bundle is submitted, THE Fiduciary_Service SHALL validate the structure against FHIR R4 schema
-2. WHEN a FHIR resource contains coded values, THE Fiduciary_Service SHALL validate terminology bindings against SNOMED CT and LOINC
-3. IF validation fails, THEN THE Fiduciary_Service SHALL reject the submission and return detailed error messages
-4. THE Fiduciary_Service SHALL support Patient, Observation, MedicationRequest, DiagnosticReport, Encounter, and Procedure resources
-5. WHEN storing a FHIR resource, THE Fiduciary_Service SHALL extract and index the patient identifier (ABHA ID)
-6. THE Fiduciary_Service SHALL maintain full version history for all FHIR resources
-7. WHEN a resource is modified, THE Fiduciary_Service SHALL create a new version and preserve all previous versions
+1. WHEN a FHIR_Bundle is submitted, THE Fiduciary_Service SHALL validate the structure against FHIR R4 schema using strict schema validation
+2. WHEN a FHIR resource contains coded values, THE Fiduciary_Service SHALL perform terminology binding validation against SNOMED CT and LOINC
+3. THE Fiduciary_Service SHALL enforce custom business rules including ABHA ID format validation, prescriber credential verification, and facility registration verification
+4. IF validation fails, THEN THE Fiduciary_Service SHALL reject the submission and return detailed error messages with specific validation failures
+5. THE Fiduciary_Service SHALL support the following FHIR resource types: Patient, Observation, MedicationRequest, DiagnosticReport, Encounter, and Procedure
+6. WHEN storing a Patient resource, THE Fiduciary_Service SHALL use ABHA ID as the primary identifier in Patient.identifier
+7. THE Fiduciary_Service SHALL maintain full version history for all FHIR resources with complete audit trail
+8. WHEN a resource is modified, THE Fiduciary_Service SHALL create a new version and preserve all previous versions indefinitely
 
 ### Requirement 7: FHIR Resource Search and Retrieval
 
-**User Story:** As a healthcare provider, I want to search for specific patient data efficiently, so that I can quickly find relevant clinical information.
+**User Story:** As a healthcare provider, I want to search for specific patient data efficiently using standard FHIR search parameters, so that I can quickly find relevant clinical information.
 
 #### Acceptance Criteria
 
-1. THE Fiduciary_Service SHALL support search by Patient.identifier using ABHA ID
-2. THE Fiduciary_Service SHALL support search by Observation.patient, Observation.category, and Observation.date
-3. WHEN searching with multiple parameters, THE Fiduciary_Service SHALL return resources matching all criteria
-4. THE Fiduciary_Service SHALL return search results in FHIR Bundle format
-5. WHEN retrieving a patient's complete history, THE Fiduciary_Service SHALL aggregate all resource types for that patient
-6. THE Fiduciary_Service SHALL support pagination for large result sets with configurable page size
-7. WHEN no resources match the search criteria, THE Fiduciary_Service SHALL return an empty Bundle with appropriate metadata
+1. THE Fiduciary_Service SHALL support search by Patient.identifier using ABHA ID as the primary search parameter
+2. THE Fiduciary_Service SHALL support search by Observation.patient, Observation.category, and Observation.date for filtering lab results and vital signs
+3. WHEN searching with multiple parameters, THE Fiduciary_Service SHALL return resources matching all criteria (AND logic)
+4. THE Fiduciary_Service SHALL return search results in FHIR Bundle format with proper pagination links
+5. WHEN retrieving a patient's complete history, THE Fiduciary_Service SHALL aggregate all resource types for that patient using the $everything operation
+6. THE Fiduciary_Service SHALL support pagination for large result sets with configurable page size (default 50, max 100)
+7. WHEN no resources match the search criteria, THE Fiduciary_Service SHALL return an empty Bundle with appropriate metadata and HTTP 200 status
 
 ### Requirement 8: FHIR Data Upload for Healthcare Facilities
 
@@ -150,17 +157,17 @@ The National Personal Health Record (PHR) System is a patient-centric digital he
 
 ### Requirement 10: Data Modification and Locking Rules
 
-**User Story:** As a patient, I want to ensure my health records cannot be altered inappropriately, so that my medical history remains accurate and trustworthy.
+**User Story:** As a patient, I want to ensure my health records cannot be altered inappropriately after a time period, so that my medical history remains accurate and trustworthy.
 
 #### Acceptance Criteria
 
-1. WHEN a FHIR resource is created, THE Fiduciary_Service SHALL record the creating provider and timestamp
-2. WHEN a configurable lock period expires, THE Fiduciary_Service SHALL prevent further modifications to the resource
-3. WHEN a provider attempts to modify a locked resource, THE Fiduciary_Service SHALL reject the request
-4. WHERE a patient grants explicit consent for modification, THE Fiduciary_Service SHALL allow modification of locked resources
-5. WHEN a resource is modified, THE Fiduciary_Service SHALL create a new version and preserve the modification history
-6. THE Fiduciary_Service SHALL log all modification attempts to the Audit_Log
-7. THE Fiduciary_Service SHALL support configurable lock periods per resource type (default 48 hours)
+1. WHEN a FHIR resource is created, THE Fiduciary_Service SHALL record the creating provider (hospital staff member) and timestamp in resource metadata
+2. WHEN a configurable lock period expires (default 48 hours), THE Fiduciary_Service SHALL prevent further modifications to the resource
+3. WHEN a provider attempts to modify a locked resource, THE Fiduciary_Service SHALL reject the request with HTTP 403 and appropriate error message
+4. WHEN a patient grants explicit consent for modification, THE Fiduciary_Service SHALL allow modification of locked resources by authorized providers
+5. WHEN a resource is modified, THE Fiduciary_Service SHALL create a new version and preserve the complete modification history with provider identity
+6. THE Fiduciary_Service SHALL log all modification attempts (successful and failed) to the Audit_Log with provider identity and reason
+7. THE Fiduciary_Service SHALL support configurable lock periods per resource type (default 48 hours, configurable from 0 to 720 hours)
 
 
 ### Requirement 11: Audit Logging and Compliance
@@ -1290,19 +1297,161 @@ The National Personal Health Record (PHR) System is a patient-centric digital he
 6. THE Central_Registry SHALL log all record reconciliation activities
 7. THE system SHALL support splitting incorrectly merged records
 
+### Requirement 91: Developer REST API
+
+**User Story:** As a third-party developer (Ravi), I want comprehensive REST APIs to integrate PHR functionality into my app, so that I can build on the platform without creating the entire infrastructure from scratch.
+
+#### Acceptance Criteria
+
+1. THE API_Gateway SHALL expose REST API endpoints for ABHA authentication, user verification, consent management, health record retrieval, and health record submission
+2. THE API_Gateway SHALL provide OpenAPI/Swagger documentation with interactive testing capabilities accessible at /api/docs
+3. THE API_Gateway SHALL implement API versioning using URL path versioning (e.g., /api/v1/, /api/v2/)
+4. THE API_Gateway SHALL enforce rate limiting per API key with configurable limits (default: 100 req/min read, 20 req/min write)
+5. THE API_Gateway SHALL return standardized error responses with error codes, messages, and actionable suggestions
+6. THE API_Gateway SHALL support API key authentication for third-party applications with key rotation capabilities
+7. THE API_Gateway SHALL log all API requests with correlation IDs for distributed tracing
+
+### Requirement 92: Webhook System for Real-Time Events
+
+**User Story:** As a third-party developer, I want to receive real-time notifications when events occur, so that my app can react immediately to changes.
+
+#### Acceptance Criteria
+
+1. THE Central_Registry SHALL support webhook registration via API with URL, event types, and authentication credentials
+2. THE Central_Registry SHALL send webhook notifications for events including consent granted/revoked, new health record added, and ABHA profile updated
+3. WHEN an event occurs, THE Central_Registry SHALL send HTTP POST requests to registered webhook URLs with event payload in JSON format
+4. THE Central_Registry SHALL implement retry logic with exponential backoff for failed webhook deliveries (max 5 retries)
+5. THE Central_Registry SHALL support webhook signature verification using HMAC-SHA256 for security
+6. THE Central_Registry SHALL provide webhook delivery logs accessible via API for debugging
+7. THE Central_Registry SHALL support webhook filtering by patient ID, resource type, and facility
+
+### Requirement 93: Client SDK Support
+
+**User Story:** As a third-party developer, I want client SDKs in popular languages, so that I can integrate quickly without writing low-level HTTP code.
+
+#### Acceptance Criteria
+
+1. THE system SHALL provide official client SDKs for JavaScript/TypeScript, Python, and Java
+2. THE SDKs SHALL provide typed interfaces for all API endpoints with auto-completion support
+3. THE SDKs SHALL handle authentication, token refresh, and error handling automatically
+4. THE SDKs SHALL include comprehensive documentation with code examples for common use cases
+5. THE SDKs SHALL support both synchronous and asynchronous API calls
+6. THE SDKs SHALL be published to standard package repositories (npm, PyPI, Maven Central)
+7. THE SDKs SHALL maintain backward compatibility and follow semantic versioning
+
+### Requirement 94: Plugin Architecture and Extension System
+
+**User Story:** As a developer, I want to build custom modules that extend the PHR system, so that I can add functionality without modifying core code.
+
+#### Acceptance Criteria
+
+1. THE system SHALL support a modular plugin architecture with defined extension points for data sources, workflows, analytics, and integrations
+2. THE system SHALL maintain a plugin registry with metadata including name, version, author, dependencies, and permissions
+3. THE system SHALL support plugin types including HIS/EHR connectors, teleconsultation modules, insurance claim processors, and analytics dashboards
+4. THE system SHALL run plugins in isolated contexts with restricted access to core system resources
+5. THE system SHALL provide plugin lifecycle management including install, enable, disable, update, and uninstall operations
+6. THE system SHALL validate plugin compatibility and dependencies before installation
+7. THE system SHALL expose plugin APIs for accessing FHIR data, consent management, and user authentication with proper authorization
+
+### Requirement 95: Self-Hosted Deployment Support
+
+**User Story:** As a state health department IT lead, I want to deploy the PHR system on my own infrastructure, so that I can maintain data sovereignty and customize for state-specific requirements.
+
+#### Acceptance Criteria
+
+1. THE system SHALL provide Docker images for all microservices published to public container registry
+2. THE system SHALL provide Docker Compose configuration for single-server development and testing deployments
+3. THE system SHALL provide Kubernetes manifests and Helm charts for production-grade deployments
+4. THE system SHALL provide Terraform modules for AWS infrastructure provisioning (EKS, RDS, DocumentDB, VPC)
+5. THE system SHALL support environment-based configuration via environment variables and configuration files
+6. THE system SHALL provide deployment documentation with step-by-step instructions for different environments
+7. THE system SHALL expose health check endpoints (/health, /ready) for monitoring and orchestration
+
+### Requirement 96: Open-Source Community Edition
+
+**User Story:** As a government or hospital, I want access to fully functional open-source PHR infrastructure, so that I can audit, customize, and deploy without vendor lock-in.
+
+#### Acceptance Criteria
+
+1. THE Community_Edition SHALL include all core PHR functionality: patient records, consent management, ABDM/ABHA integration, and basic APIs
+2. THE Community_Edition SHALL be licensed under Apache 2.0 or MIT permissive open-source license
+3. THE Community_Edition SHALL include standard UI components and self-hosting deployment scripts
+4. THE Community_Edition SHALL provide basic documentation including architecture overview, API reference, and deployment guide
+5. THE Community_Edition SHALL be available on public GitHub repository with issue tracking and contribution guidelines
+6. THE Community_Edition SHALL support community contributions via pull requests with code review process
+7. THE Community_Edition SHALL maintain backward compatibility within major versions
+
+### Requirement 97: Enterprise Edition Features
+
+**User Story:** As a large hospital administrator, I want advanced enterprise features with support, so that I can run a production system with guaranteed SLAs.
+
+#### Acceptance Criteria
+
+1. THE Enterprise_Edition SHALL include advanced multi-tenant management console with tenant provisioning and monitoring
+2. THE Enterprise_Edition SHALL provide enterprise-grade audit and compliance dashboards with custom report generation
+3. THE Enterprise_Edition SHALL include premium integrations for HIS/EHR systems, insurance/HCX, and lab/pharmacy hubs
+4. THE Enterprise_Edition SHALL provide advanced analytics and reporting with data visualization and export capabilities
+5. THE Enterprise_Edition SHALL include priority support with guaranteed response times (4 hours for critical, 24 hours for high)
+6. THE Enterprise_Edition SHALL provide advanced security features including SSO, LDAP integration, and custom authentication providers
+7. THE Enterprise_Edition SHALL be licensed under commercial license with per-tenant or per-user pricing model
+
+### Requirement 98: Developer Sandbox Environment
+
+**User Story:** As a third-party developer, I want a sandbox environment to test my integration, so that I can develop without affecting production data.
+
+#### Acceptance Criteria
+
+1. THE system SHALL provide a public sandbox environment with test data for developer testing
+2. THE sandbox SHALL provide test ABHA IDs and sample health records for integration testing
+3. THE sandbox SHALL reset data daily to maintain clean test environment
+4. THE sandbox SHALL have relaxed rate limits to facilitate development and testing
+5. THE sandbox SHALL provide the same API endpoints and behavior as production
+6. THE sandbox SHALL include API documentation with sandbox-specific examples and credentials
+7. THE sandbox SHALL log all API requests for developers to debug their integrations
+
+### Requirement 99: API Marketplace and Plugin Registry
+
+**User Story:** As a developer, I want to publish my plugins to a marketplace, so that other users can discover and install my extensions.
+
+#### Acceptance Criteria
+
+1. THE system SHALL provide a public plugin marketplace website for browsing available plugins
+2. THE marketplace SHALL display plugin metadata including description, screenshots, ratings, and download count
+3. THE marketplace SHALL support plugin search and filtering by category, popularity, and compatibility
+4. THE marketplace SHALL allow developers to publish plugins with automated security scanning
+5. THE marketplace SHALL support plugin versioning with changelog and update notifications
+6. THE marketplace SHALL provide plugin installation via CLI or web interface
+7. THE marketplace SHALL allow users to rate and review plugins with moderation
+
+### Requirement 100: Comprehensive API Documentation
+
+**User Story:** As a third-party developer, I want comprehensive API documentation with examples, so that I can integrate quickly without trial and error.
+
+#### Acceptance Criteria
+
+1. THE system SHALL provide API documentation with endpoint descriptions, parameters, request/response examples, and error codes
+2. THE documentation SHALL include authentication guide with step-by-step instructions for obtaining API keys
+3. THE documentation SHALL provide integration guides for common use cases (fetch patient records, submit lab results, manage consent)
+4. THE documentation SHALL include code examples in multiple languages (JavaScript, Python, Java, cURL)
+5. THE documentation SHALL provide FHIR resource examples with all required and optional fields
+6. THE documentation SHALL include troubleshooting guide with common errors and solutions
+7. THE documentation SHALL be versioned and maintained alongside API versions with migration guides
+
 ---
 
 ## Summary
 
-This requirements document defines 90 comprehensive requirements covering all aspects of the National Personal Health Record (PHR) System. The requirements address:
+This requirements document defines 100 comprehensive requirements covering all aspects of the National Personal Health Record (PHR) System. The requirements address:
 
 - **Core Functionality**: Authentication, health dashboards, consent management, data access
-- **FHIR Implementation**: Resource storage, validation, search, versioning, terminology binding
-- **Security & Privacy**: Encryption, audit logging, consent verification, emergency access
+- **FHIR Implementation**: Resource storage with strict validation, terminology binding, custom business rules, search with standard parameters, versioning
+- **Security & Privacy**: Encryption, audit logging, consent verification, emergency access, resource locking with time-based controls
 - **Multi-Tenancy**: Shared and dedicated fiduciary services
 - **User Experience**: Progressive web apps, offline support, multilingual interfaces, accessibility
 - **Clinical Features**: Medication reconciliation, allergies, lab results, immunizations, appointments
+- **Developer Platform**: Comprehensive REST APIs, webhook system, client SDKs, plugin architecture, sandbox environment
+- **Open-Source & Deployment**: Self-hosted deployment, Docker/Kubernetes support, open-core business model, community and enterprise editions
 - **Advanced Features**: Telemedicine, insurance claims, public health reporting, AI insights, genomic data
 - **Operational Requirements**: Performance, scalability, monitoring, disaster recovery, compliance
 
-Each requirement follows EARS patterns and INCOSE quality rules, ensuring clarity, testability, and completeness. The requirements are traceable to user stories and provide specific acceptance criteria that can be validated through testing.
+Each requirement follows EARS patterns and INCOSE quality rules, ensuring clarity, testability, and completeness. The requirements are traceable to user stories and provide specific acceptance criteria that can be validated through testing. The system is designed as **open-source PHR infrastructure** that can be deployed, audited, customized, and extended by governments, hospitals, and developers, with a comprehensive API platform enabling a thriving ecosystem of third-party integrations and innovations.
